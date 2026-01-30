@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 运行 lint-staged（格式化代码）
+pnpm lint-staged
+
+# 运行完整的类型检查（只运行一次，而不是为每个文件运行）
+pnpm exec tsc --project tsconfig.lint.json --noEmit --pretty
