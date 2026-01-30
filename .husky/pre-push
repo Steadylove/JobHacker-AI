@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# 运行完整测试套件
-pnpm test
+# 运行完整测试套件（使用 run 模式，不进入 watch）
+pnpm test:run
 
 # 确保代码可以构建
 pnpm build
