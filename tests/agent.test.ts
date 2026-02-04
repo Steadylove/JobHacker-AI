@@ -17,7 +17,7 @@ describe('Agent Module', () => {
   });
 
   describe('buildPrompt', () => {
-    it('应该构建包含用户背景和职位描述的提示词', () => {
+    it('应该构建包含职位信息和评分标准的提示词', () => {
       const job: Job = {
         id: '1',
         title: 'Frontend Engineer',
@@ -29,11 +29,14 @@ describe('Agent Module', () => {
       };
 
       const prompt = buildPrompt(job, userBackground);
-      expect(prompt).toContain('3年前端工程师经验');
-      expect(prompt).toContain('React'); // 实际格式是 "React、Next.js、TypeScript"
-      expect(prompt).toContain('Next.js');
+      // 检查新的 prompt 格式
+      expect(prompt).toContain('前端开发相关职位');
+      expect(prompt).toContain('支持远程工作');
+      expect(prompt).toContain('Frontend Engineer');
+      expect(prompt).toContain('Tech Corp');
       expect(prompt).toContain('Looking for React/TypeScript developer');
       expect(prompt).toContain('JSON格式');
+      expect(prompt).toContain('8-10');
     });
   });
 

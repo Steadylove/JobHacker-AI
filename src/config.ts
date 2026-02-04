@@ -50,8 +50,8 @@ export const apiEndpoints = {
  * 过滤配置
  */
 export const filterConfig = {
-  minScore: 8, // 最低评分
-  hoursThreshold: 24, // 只保留24小时内发布的职位
+  minScore: 5, // 最低评分
+  hoursThreshold: 24 * 7, // 只保留7天内发布的职位
 };
 
 /**

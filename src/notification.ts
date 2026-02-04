@@ -29,21 +29,12 @@ function getTelegramConfig(): TelegramConfig | null {
 function formatJobMessage(job: AnalyzedJob): string {
   const scoreEmoji = job.score >= 9 ? '🔥' : job.score >= 8 ? '⭐' : '✨';
 
-  return `
-${scoreEmoji} *${job.score}/10* | ${escapeMarkdown(job.title)}
+  return `${scoreEmoji} *${job.score}/10* | ${job.title}
 
-🏢 *公司*: ${escapeMarkdown(job.company)}
-📝 *理由*: ${escapeMarkdown(job.reason)}
-🔗 [查看职位](${job.url})
-📍 来源: ${job.source}
-`.trim();
-}
-
-/**
- * 转义 Markdown 特殊字符
- */
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+🏢 公司: ${job.company}
+📝 理由: ${job.reason}
+🔗 链接: ${job.url}
+📍 来源: ${job.source}`;
 }
 
 /**
@@ -58,7 +49,7 @@ async function sendTelegramMessage(config: TelegramConfig, message: string): Pro
       {
         chat_id: config.chatId,
         text: message,
-        parse_mode: 'MarkdownV2',
+        parse_mode: 'Markdown',
         disable_web_page_preview: false,
       },
       {
@@ -102,11 +93,9 @@ export async function sendNotifications(jobs: AnalyzedJob[]): Promise<void> {
 
   if (telegramConfig && jobs.length > 0) {
     // 发送汇总消息
-    const summaryMessage = `
-🎯 *Job Hunter 发现 ${jobs.length} 个高匹配职位\\!*
+    const summaryMessage = `🎯 *Job Hunter 发现 ${jobs.length} 个高匹配职位!*
 
-${jobs.map((j, i) => `${i + 1}\\. ${escapeMarkdown(j.title)} \\(${j.score}/10\\)`).join('\n')}
-`.trim();
+${jobs.map((j, i) => `${i + 1}. ${j.title} (${j.score}/10)`).join('\n')}`;
 
     await sendTelegramMessage(telegramConfig, summaryMessage);
   }
@@ -130,12 +119,10 @@ export async function sendTestNotification(): Promise<boolean> {
     return false;
   }
 
-  const testMessage = `
-🤖 *Job Hunter 测试消息*
+  const testMessage = `🤖 *Job Hunter 测试消息*
 
-✅ Telegram 通知已成功配置\\!
-⏰ 时间: ${escapeMarkdown(new Date().toISOString())}
-`.trim();
+✅ Telegram 通知已成功配置!
+⏰ 时间: ${new Date().toISOString()}`;
 
   return await sendTelegramMessage(telegramConfig, testMessage);
 }

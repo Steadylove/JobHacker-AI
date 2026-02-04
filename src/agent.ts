@@ -69,13 +69,11 @@ async function callClaudeAPI(
  * 构建AI分析提示词
  */
 export function buildPrompt(job: Job, background: UserBackground = defaultBackground): string {
-  return `你是一个招聘匹配专家。请分析以下职位描述与候选人背景的匹配度。
+  return `你是一个招聘匹配专家。请判断这个职位是否适合候选人。
 
-候选人背景：
-- ${background.experience}
-- 擅长 ${background.skills.join('、')}
-- 坐标${background.location}，${background.preferences.remoteOnly ? '寻找远程工作' : '可接受远程或本地工作'}
-- 对 ${background.preferences.industries.join(' 或 ')} 初创公司感兴趣
+候选人需求（非常简单）：
+1. 前端开发相关职位（Frontend, React, Vue, Next.js, TypeScript, JavaScript, UI, Web Developer 等）
+2. 支持远程工作
 
 职位信息：
 - 标题：${job.title}
@@ -85,12 +83,13 @@ export function buildPrompt(job: Job, background: UserBackground = defaultBackgr
 请返回JSON格式（不要包含任何其他文字或代码块标记）：
 {"score": 1-10, "reason": "一句话说明匹配原因"}
 
-评分标准：
-- 1-3: 完全不匹配
-- 4-5: 部分匹配但差距较大
-- 6-7: 基本匹配，有一些优势
-- 8-9: 高度匹配，非常适合
-- 10: 完美匹配`;
+评分标准（关键规则）：
+- 8-10: 是前端相关职位 + 支持远程 → 直接给高分
+- 6-7: 是前端相关但不确定是否远程
+- 4-5: 全栈或后端为主的职位
+- 1-3: 完全不是开发岗位（销售、市场、运营等）
+
+注意：只要职位标题或描述包含前端相关关键词（Frontend, React, Vue, Angular, Next.js, Nuxt, TypeScript, JavaScript, CSS, HTML, UI, Web Developer），且职位是远程的，就给 8 分以上！`;
 }
 
 /**
