@@ -4,7 +4,13 @@ on:
   # 定时运行：每6小时执行一次
   schedule:
     - cron: '0 */6 * * *'
-  
+
+  # Push 到 main 分支时触发
+  push:
+    branches:
+      - main
+      - master
+
   # 允许手动触发
   workflow_dispatch:
 
@@ -12,7 +18,7 @@ jobs:
   hunt-jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,17 +46,18 @@ jobs:
             processed-jobs-
 
       - name: Run Job Hunter
+        id: hunter
         env:
           AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          # Telegram 通知（可选）
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # 创建数据目录
           mkdir -p data
-          # 运行一次（不启动 cron，因为 GitHub Actions 本身就是定时的）
-          node --import tsx src/index.ts --once || true
+          node --import tsx src/index.ts --once 2>&1 | tee output.log
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          tail -50 output.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Save job data
         uses: actions/cache/save@v4
@@ -58,3 +65,45 @@ jobs:
         with:
           path: data/processed_jobs.json
           key: processed-jobs-${{ github.run_id }}
+
+      # 发送成功通知
+      - name: Notify Success
+        if: success() && env.TELEGRAM_BOT_TOKEN != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          MESSAGE=$(cat <<EOF
+          ✅ *Job Hunter 运行成功*
+          ⏰ 时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
+          🔗 [查看日志](https://github.com/${REPO}/actions/runs/${RUN_ID})
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview="true"
+
+      # 发送失败通知
+      - name: Notify Failure
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          MESSAGE=$(cat <<EOF
+          ❌ *Job Hunter 运行失败*
+          ⏰ 时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
+          🔗 [查看错误日志](https://github.com/${REPO}/actions/runs/${RUN_ID})
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview="true"
