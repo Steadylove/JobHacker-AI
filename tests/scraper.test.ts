@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-import { fetchRemoteOKJobs, fetchWWRJobs, normalizeJob, filterByTime } from '../src/scraper.js';
+import {
+  fetchRemoteOKJobs,
+  fetchWWRJobs,
+  fetchWeb3CareerJobs,
+  normalizeJob,
+  filterByTime,
+} from '../src/scraper.js';
 import { Job } from '../src/types.js';
 
 // Mock axios
@@ -86,6 +92,65 @@ describe('Scraper Module', () => {
     });
   });
 
+  describe('fetchWeb3CareerJobs', () => {
+    it('应该成功解析Web3.career JSON API数据', async () => {
+      const mockJson = {
+        jobs: [
+          {
+            id: 123,
+            title: 'Solidity Developer',
+            company: 'Web3 Startup',
+            description: 'Looking for experienced blockchain developer',
+            url: 'https://web3.career/solidity-developer-job',
+            published_at: new Date().toISOString(),
+          },
+        ],
+      };
+
+      // 第一个端点（JSON API）成功返回
+      mockedAxios.get.mockResolvedValueOnce({ data: mockJson, status: 200 });
+
+      const jobs = await fetchWeb3CareerJobs();
+      expect(jobs.length).toBeGreaterThan(0);
+      expect(jobs[0].source).toBe('web3career');
+    });
+
+    it('应该正确解析RSS数据当JSON失败时', async () => {
+      const mockRSS = `<?xml version="1.0"?>
+        <rss version="2.0">
+          <channel>
+            <item>
+              <title>Frontend Developer at Uniswap</title>
+              <link>https://web3.career/frontend-developer-uniswap</link>
+              <description>Join the DeFi revolution</description>
+              <pubDate>${new Date().toUTCString()}</pubDate>
+            </item>
+          </channel>
+        </rss>`;
+
+      // 第一个端点返回404，第二个端点（RSS）成功
+      mockedAxios.get
+        .mockResolvedValueOnce({ data: '', status: 404 })
+        .mockResolvedValueOnce({ data: mockRSS, status: 200 });
+
+      const jobs = await fetchWeb3CareerJobs();
+      expect(jobs.length).toBeGreaterThan(0);
+      expect(jobs[0].company).toBe('Uniswap');
+    });
+
+    it('应该处理所有端点失败并返回空数组', async () => {
+      // 所有端点都失败
+      mockedAxios.get
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'));
+
+      const jobs = await fetchWeb3CareerJobs();
+      expect(Array.isArray(jobs)).toBe(true);
+      expect(jobs).toHaveLength(0);
+    });
+  });
+
   describe('normalizeJob', () => {
     it('应该正确标准化RemoteOK职位数据', () => {
       const rawJob = {
@@ -116,6 +181,23 @@ describe('Scraper Module', () => {
       expect(normalized.id).toContain('weworkremotely');
       expect(normalized.title).toBe('Senior Developer');
       expect(normalized.source).toBe('weworkremotely');
+    });
+
+    it('应该正确标准化Web3Career职位数据', () => {
+      const rawJob = {
+        id: 789,
+        title: 'Smart Contract Developer',
+        company: 'DeFi Protocol',
+        description: 'Solidity expertise required',
+        url: 'https://web3.career/smart-contract-developer',
+        published_at: new Date().toISOString(),
+      };
+
+      const normalized = normalizeJob(rawJob, 'web3career');
+      expect(normalized.id).toBe('web3career-789');
+      expect(normalized.title).toBe('Smart Contract Developer');
+      expect(normalized.source).toBe('web3career');
+      expect(normalized.company).toBe('DeFi Protocol');
     });
   });
 

@@ -1,0 +1,60 @@
+name: AI Job Hunter
+
+on:
+  # 定时运行：每6小时执行一次
+  schedule:
+    - cron: '0 */6 * * *'
+  
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  hunt-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download previous job data
+        uses: actions/cache@v4
+        with:
+          path: data/processed_jobs.json
+          key: processed-jobs-${{ github.run_id }}
+          restore-keys: |
+            processed-jobs-
+
+      - name: Run Job Hunter
+        env:
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          # Telegram 通知（可选）
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # 创建数据目录
+          mkdir -p data
+          # 运行一次（不启动 cron，因为 GitHub Actions 本身就是定时的）
+          node --import tsx src/index.ts --once || true
+
+      - name: Save job data
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/processed_jobs.json
+          key: processed-jobs-${{ github.run_id }}

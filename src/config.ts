@@ -5,7 +5,26 @@ import { UserBackground } from './types.js';
  */
 export const userBackground: UserBackground = {
   experience: '3年前端工程师经验',
-  skills: ['React', 'Next.js', 'TypeScript'],
+  skills: [
+    'React',
+    'Next.js',
+    'TypeScript',
+    'Vue',
+    'Nuxt',
+    'Tailwind',
+    'Bootstrap',
+    'Material UI',
+    'Ant Design',
+    'Chakra UI',
+    'Shadcn UI',
+    'Tailwind CSS',
+    'Bootstrap CSS',
+    'Material UI CSS',
+    'Ant Design CSS',
+    'Chakra UI CSS',
+    'Shadcn UI CSS',
+    'Node.js',
+  ],
   location: '中国',
   preferences: {
     remoteOnly: true,
@@ -19,6 +38,12 @@ export const userBackground: UserBackground = {
 export const apiEndpoints = {
   remoteok: 'https://remoteok.com/api',
   weworkremotely: 'https://weworkremotely.com/categories/remote-programming-jobs.rss',
+  web3career: 'https://web3.career/api/v1',
+  hnhiring: 'https://hacker-news.firebaseio.com/v0',
+  jobicy: 'https://jobicy.com/feed/newjobs',
+  cryptojobslist: 'https://cryptojobslist.com/api/jobs',
+  workingnomads: 'https://www.workingnomads.com/api/exposed_jobs/',
+  remotive: 'https://remotive.com/api/remote-jobs',
 };
 
 /**
@@ -32,7 +57,7 @@ export const filterConfig = {
 /**
  * AI 服务提供商类型
  */
-export type AIProvider = 'deepseek' | 'openai' | 'groq' | 'together' | 'custom';
+export type AIProvider = 'deepseek' | 'openai' | 'groq' | 'together' | 'claude' | 'custom';
 
 /**
  * AI 服务配置
@@ -69,6 +94,11 @@ export const aiConfigs: Record<AIProvider, Partial<AIConfig>> = {
     model: 'meta-llama/Llama-3-70b-chat-hf',
     temperature: 0.7,
   },
+  claude: {
+    baseURL: 'https://api.anthropic.com',
+    model: 'claude-sonnet-4-20250514', // 或 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'
+    temperature: 0.7,
+  },
   custom: {
     // 自定义配置，需要提供完整的 baseURL 和 model
     temperature: 0.7,
@@ -81,10 +111,15 @@ export const aiConfigs: Record<AIProvider, Partial<AIConfig>> = {
 export function getAIConfig(): AIConfig {
   const provider = (process.env.AI_PROVIDER || 'deepseek') as AIProvider;
   const apiKeyEnv =
-    process.env.AI_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+    process.env.AI_API_KEY ||
+    process.env.DEEPSEEK_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY;
 
   if (!apiKeyEnv) {
-    throw new Error('AI_API_KEY 或 DEEPSEEK_API_KEY 或 OPENAI_API_KEY 环境变量未设置');
+    throw new Error(
+      'AI_API_KEY 或 DEEPSEEK_API_KEY 或 OPENAI_API_KEY 或 ANTHROPIC_API_KEY 环境变量未设置'
+    );
   }
 
   const preset = aiConfigs[provider] || aiConfigs.deepseek;

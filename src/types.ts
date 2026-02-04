@@ -8,7 +8,15 @@ export interface Job {
   description: string;
   url: string;
   postedAt: Date;
-  source: 'remoteok' | 'weworkremotely';
+  source:
+    | 'remoteok'
+    | 'weworkremotely'
+    | 'web3career'
+    | 'hnhiring'
+    | 'jobicy'
+    | 'cryptojobslist'
+    | 'workingnomads'
+    | 'remotive';
 }
 
 /**

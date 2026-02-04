@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
+import axios from 'axios';
 import { Job, AnalyzedJob, UserBackground } from './types.js';
-import { getAIConfig, userBackground as defaultBackground } from './config.js';
+import { getAIConfig, userBackground as defaultBackground, AIConfig } from './config.js';
 import { config } from 'dotenv';
 
 config();
@@ -8,21 +9,60 @@ config();
 /**
  * 创建 OpenAI 客户端（兼容所有 OpenAI API 格式的服务）
  */
-function createOpenAIClient() {
-  const config = getAIConfig();
-
+function createOpenAIClient(aiConfig: AIConfig) {
   const clientConfig: {
     apiKey: string;
     baseURL?: string;
   } = {
-    apiKey: config.apiKey,
+    apiKey: aiConfig.apiKey,
   };
 
-  if (config.baseURL) {
-    clientConfig.baseURL = config.baseURL;
+  if (aiConfig.baseURL) {
+    clientConfig.baseURL = aiConfig.baseURL;
   }
 
   return new OpenAI(clientConfig);
+}
+
+/**
+ * 调用 Claude (Anthropic) API
+ */
+async function callClaudeAPI(
+  aiConfig: AIConfig,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  const response = await axios.post(
+    'https://api.anthropic.com/v1/messages',
+    {
+      model: aiConfig.model,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      system: systemPrompt,
+      temperature: aiConfig.temperature,
+    },
+    {
+      proxy: false,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aiConfig.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      timeout: 30000,
+    }
+  );
+
+  const content = response.data?.content?.[0]?.text;
+  if (!content) {
+    throw new Error('Claude API 返回空响应');
+  }
+
+  return content;
 }
 
 /**
@@ -94,29 +134,38 @@ export async function analyzeJob(
   background: UserBackground = defaultBackground
 ): Promise<AnalyzedJob> {
   const aiConfig = getAIConfig();
-  const openai = createOpenAIClient();
   const prompt = buildPrompt(job, background);
+  const systemPrompt = '你是一个专业的招聘匹配分析专家，擅长评估职位与候选人的匹配度。';
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: aiConfig.model,
-      messages: [
-        {
-          role: 'system',
-          content: '你是一个专业的招聘匹配分析专家，擅长评估职位与候选人的匹配度。',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: aiConfig.temperature,
-      response_format: { type: 'json_object' },
-    });
+    let content: string;
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('AI返回空响应');
+    if (aiConfig.provider === 'claude') {
+      // 使用 Claude API
+      content = await callClaudeAPI(aiConfig, systemPrompt, prompt);
+    } else {
+      // 使用 OpenAI 兼容 API
+      const openai = createOpenAIClient(aiConfig);
+      const completion = await openai.chat.completions.create({
+        model: aiConfig.model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: aiConfig.temperature,
+        response_format: { type: 'json_object' },
+      });
+
+      content = completion.choices[0]?.message?.content || '';
+      if (!content) {
+        throw new Error('AI返回空响应');
+      }
     }
 
     const { score, reason } = parseAIResponse(content);

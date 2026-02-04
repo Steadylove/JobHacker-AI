@@ -6,6 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "start:once": "tsx src/index.ts --once",
     "build": "tsc",
     "test": "vitest",
     "test:run": "vitest run",

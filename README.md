@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- 🔍 **多数据源抓取**: 从 RemoteOK 和 WeWorkRemotely 自动抓取职位
+- 🔍 **8大数据源抓取**: 从 RemoteOK、WeWorkRemotely、Web3.career、Hacker News、Jobicy、CryptoJobsList、Working Nomads、Remotive 并行抓取职位
 - 🤖 **AI智能分析**: 使用 AI API 分析职位与个人背景的匹配度（1-10分），支持多种 AI 服务提供商
 - ⏰ **时间过滤**: 只处理24小时内发布的新职位
 - 🚫 **去重机制**: 自动记录已处理职位，避免重复分析
@@ -135,22 +135,24 @@ pnpm test:coverage
 
 ## AI 服务提供商说明
 
-项目支持多种 AI 服务提供商，所有提供商都使用 OpenAI 兼容的 API 格式，可以无缝切换。
+项目支持多种 AI 服务提供商，可以无缝切换。
 
 ### 支持的提供商
 
-| 提供商          | 特点                 | 推荐场景             | 模型示例                                        |
-| --------------- | -------------------- | -------------------- | ----------------------------------------------- |
-| **DeepSeek**    | 性价比高，中文支持好 | 日常使用，中文分析   | `deepseek-chat`                                 |
-| **OpenAI**      | 质量高，稳定可靠     | 生产环境，高质量分析 | `gpt-4o-mini`, `gpt-4`, `gpt-3.5-turbo`         |
-| **Groq**        | 速度快，有免费额度   | 快速测试，开发调试   | `llama-3.1-70b-versatile`, `mixtral-8x7b-32768` |
-| **Together AI** | 开源模型，价格低     | 成本敏感场景         | `meta-llama/Llama-3-70b-chat-hf`                |
-| **Custom**      | 自定义服务           | 私有部署，企业内网   | 任意 OpenAI 兼容服务                            |
+| 提供商          | 特点                     | 推荐场景             | 模型示例                                             |
+| --------------- | ------------------------ | -------------------- | ---------------------------------------------------- |
+| **DeepSeek**    | 性价比高，中文支持好     | 日常使用，中文分析   | `deepseek-chat`                                      |
+| **OpenAI**      | 质量高，稳定可靠         | 生产环境，高质量分析 | `gpt-4o-mini`, `gpt-4`, `gpt-3.5-turbo`              |
+| **Claude**      | 分析能力强，长文本支持好 | 复杂分析，详细评估   | `claude-sonnet-4-20250514`, `claude-3-opus-20240229` |
+| **Groq**        | 速度快，有免费额度       | 快速测试，开发调试   | `llama-3.1-70b-versatile`, `mixtral-8x7b-32768`      |
+| **Together AI** | 开源模型，价格低         | 成本敏感场景         | `meta-llama/Llama-3-70b-chat-hf`                     |
+| **Custom**      | 自定义服务               | 私有部署，企业内网   | 任意 OpenAI 兼容服务                                 |
 
 ### 如何选择
 
 - **追求性价比**: 推荐 DeepSeek
-- **追求质量**: 推荐 OpenAI GPT-4o-mini 或 GPT-4
+- **追求质量**: 推荐 OpenAI GPT-4o-mini 或 Claude
+- **深度分析**: 推荐 Claude (擅长详细分析)
 - **追求速度**: 推荐 Groq
 - **追求成本**: 推荐 Together AI
 - **企业内网**: 使用 Custom 配置私有服务
@@ -209,10 +211,17 @@ Cron 表达式格式: `分钟 小时 日 月 星期`
 
 🚀 开始抓取职位数据...
 
-📡 从 RemoteOK 获取职位...
-✓ 获取到 50 个职位
-📡 从 WeWorkRemotely 获取职位...
-✓ 获取到 30 个职位
+📡 并行获取所有数据源...
+✓ RemoteOK: 94 个职位
+✓ WeWorkRemotely: 25 个职位
+✓ Web3.career: 30 个职位
+✓ Hacker News: 45 个职位
+✓ Jobicy: 20 个职位
+✓ CryptoJobsList: 35 个职位
+✓ Working Nomads: 50 个职位
+✓ Remotive: 80 个职位
+
+📊 共获取到 379 个职位
 
 ⏰ 过滤24小时内的职位...
 ✓ 剩余 15 个职位
@@ -231,6 +240,28 @@ Link: https://...
 ========================================
 ```
 
+## 支持的数据源
+
+项目目前支持 8 个远程工作平台，并行抓取以提高效率：
+
+| 平台               | 类型     | 特点                     | API 类型    |
+| ------------------ | -------- | ------------------------ | ----------- |
+| **RemoteOK**       | 综合     | 最大的远程工作平台之一   | JSON API    |
+| **WeWorkRemotely** | 综合     | 高质量远程工作，大公司多 | RSS         |
+| **Web3.career**    | Web3     | 区块链/加密货币领域      | JSON/RSS    |
+| **Hacker News**    | 技术社区 | "Who is Hiring" 帖子     | Algolia API |
+| **Jobicy**         | 远程工作 | 欧洲远程工作平台         | RSS         |
+| **CryptoJobsList** | Web3     | 加密货币/DeFi 职位       | JSON API    |
+| **Working Nomads** | 数字游民 | 适合远程工作者           | JSON API    |
+| **Remotive**       | 远程工作 | 分类详细，质量高         | JSON API    |
+
+### 数据源特点
+
+- **并行抓取**: 所有数据源同时请求，大幅减少等待时间
+- **容错处理**: 单个数据源失败不影响其他数据源
+- **去重机制**: 自动过滤重复职位
+- **时间过滤**: 只处理 24 小时内的新职位
+
 ## 开发说明
 
 ### TDD 开发方法
@@ -247,14 +278,44 @@ Link: https://...
 2. 在 `src/index.ts` 中调用新函数
 3. 确保返回的数据符合 `Job` 接口
 
-### 集成通知功能
+### Telegram 通知配置
 
-在 `src/notification.ts` 中实现 `sendNotification()` 函数，可以集成：
+项目已集成 Telegram Bot 通知，配置步骤：
 
-- Feishu Webhook
-- Telegram Bot API
+**1. 创建 Telegram Bot**
+
+1. 在 Telegram 搜索 `@BotFather`
+2. 发送 `/newbot`
+3. 按提示设置 Bot 名称
+4. 保存获得的 `Bot Token`
+
+**2. 获取 Chat ID**
+
+- **个人消息**: 搜索 `@userinfobot`，发送任意消息获取你的 ID
+- **群组消息**: 将 Bot 加入群组，访问 `https://api.telegram.org/bot<TOKEN>/getUpdates` 获取群组 ID
+
+**3. 配置环境变量**
+
+```env
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
+```
+
+**4. GitHub Actions 配置**
+
+在仓库 Settings → Secrets → Actions 添加：
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+### 扩展其他通知渠道
+
+在 `src/notification.ts` 中可以添加：
+
+- 飞书 Webhook
 - Email (nodemailer)
-- 其他通知渠道
+- Discord Webhook
+- Slack Webhook
 
 ## Git Hooks (Husky)
 
@@ -299,6 +360,43 @@ git commit --no-verify
 # 跳过 pre-push
 git push --no-verify
 ```
+
+## 部署
+
+### GitHub Actions（推荐，免费）
+
+项目已配置 GitHub Actions 自动运行：
+
+1. **Fork 或 Push 代码到 GitHub**
+
+2. **设置 Secrets**（Settings → Secrets and variables → Actions）：
+   - `AI_PROVIDER`: 你的 AI 提供商（如 `deepseek`、`claude`）
+   - `AI_API_KEY`: 你的 API Key
+
+3. **自动运行**：每 6 小时自动执行一次，也可手动触发
+
+4. **手动触发**：Actions → AI Job Hunter → Run workflow
+
+### 其他部署方式
+
+```bash
+# 本地守护模式（持续运行）
+pnpm dev
+
+# 单次运行（适合 CI/CD）
+pnpm start:once
+
+# 生产环境
+pnpm build && pnpm start
+```
+
+### 运行模式
+
+| 命令              | 说明                         |
+| ----------------- | ---------------------------- |
+| `pnpm dev`        | 开发模式，运行后启动定时任务 |
+| `pnpm start:once` | 单次运行，执行完毕后退出     |
+| `pnpm start`      | 生产模式，需要先 build       |
 
 ## 注意事项
 

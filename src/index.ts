@@ -1,7 +1,17 @@
 import { config } from 'dotenv';
 import chalk from 'chalk';
 import { schedule } from 'node-cron';
-import { fetchRemoteOKJobs, fetchWWRJobs, filterByTime } from './scraper.js';
+import {
+  fetchRemoteOKJobs,
+  fetchWWRJobs,
+  fetchWeb3CareerJobs,
+  fetchHNHiringJobs,
+  fetchJobicyJobs,
+  fetchCryptoJobsListJobs,
+  fetchWorkingNomadsJobs,
+  fetchRemotiveJobs,
+  filterByTime,
+} from './scraper.js';
 import { analyzeJob } from './agent.js';
 import { loadProcessedJobs, saveProcessedJob, isJobProcessed } from './storage.js';
 import { sendNotification } from './notification.js';
@@ -53,17 +63,34 @@ async function processJobs(): Promise<void> {
   console.log(chalk.bold.blue('\n🚀 开始抓取职位数据...\n'));
 
   try {
-    // 1. 抓取数据
-    console.log(chalk.yellow('📡 从 RemoteOK 获取职位...'));
-    const remoteOKJobs = await fetchRemoteOKJobs();
-    console.log(chalk.green(`✓ 获取到 ${remoteOKJobs.length} 个职位`));
+    // 1. 并行抓取所有数据源
+    console.log(chalk.yellow('📡 并行获取所有数据源...'));
 
-    console.log(chalk.yellow('📡 从 WeWorkRemotely 获取职位...'));
-    const wwrJobs = await fetchWWRJobs();
-    console.log(chalk.green(`✓ 获取到 ${wwrJobs.length} 个职位`));
+    const sources = [
+      { name: 'RemoteOK', fetch: fetchRemoteOKJobs },
+      { name: 'WeWorkRemotely', fetch: fetchWWRJobs },
+      { name: 'Web3.career', fetch: fetchWeb3CareerJobs },
+      { name: 'Hacker News', fetch: fetchHNHiringJobs },
+      { name: 'Jobicy', fetch: fetchJobicyJobs },
+      { name: 'CryptoJobsList', fetch: fetchCryptoJobsListJobs },
+      { name: 'Working Nomads', fetch: fetchWorkingNomadsJobs },
+      { name: 'Remotive', fetch: fetchRemotiveJobs },
+    ];
 
-    // 2. 合并并过滤24小时内的职位
-    const allJobs = [...remoteOKJobs, ...wwrJobs];
+    const results = await Promise.allSettled(sources.map((s) => s.fetch()));
+
+    const allJobs: Job[] = [];
+    results.forEach((result, index) => {
+      const sourceName = sources[index].name;
+      if (result.status === 'fulfilled') {
+        console.log(chalk.green(`✓ ${sourceName}: ${result.value.length} 个职位`));
+        allJobs.push(...result.value);
+      } else {
+        console.log(chalk.red(`✗ ${sourceName}: 获取失败`));
+      }
+    });
+
+    console.log(chalk.bold.cyan(`\n📊 共获取到 ${allJobs.length} 个职位\n`));
     console.log(chalk.yellow(`\n⏰ 过滤24小时内的职位...`));
     const recentJobs = filterByTime(allJobs, filterConfig.hoursThreshold);
     console.log(chalk.green(`✓ 剩余 ${recentJobs.length} 个职位`));
@@ -129,6 +156,9 @@ async function processJobs(): Promise<void> {
  * 主函数
  */
 async function main(): Promise<void> {
+  // 检查是否为单次运行模式（用于 CI/CD 环境）
+  const isOnceMode = process.argv.includes('--once') || process.env.RUN_ONCE === 'true';
+
   console.log(chalk.bold.cyan('╔════════════════════════════════════╗'));
   console.log(chalk.bold.cyan('║   AI-Powered Job Hunting Agent    ║'));
   console.log(chalk.bold.cyan('╚════════════════════════════════════╝\n'));
@@ -140,19 +170,27 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error(chalk.red('❌ 错误: AI API 配置无效'));
     console.log(
-      chalk.yellow('请创建 .env 文件并设置 AI_API_KEY 或 DEEPSEEK_API_KEY/OPENAI_API_KEY')
+      chalk.yellow(
+        '请创建 .env 文件并设置 AI_API_KEY 或 DEEPSEEK_API_KEY/OPENAI_API_KEY/ANTHROPIC_API_KEY'
+      )
     );
-    console.log(chalk.yellow('支持的提供商: deepseek, openai, groq, together, custom'));
+    console.log(chalk.yellow('支持的提供商: deepseek, openai, claude, groq, together, custom'));
     if (error instanceof Error) {
       console.error(chalk.red(`错误详情: ${error.message}`));
     }
     process.exit(1);
   }
 
-  // 立即执行一次
+  // 执行一次
   await processJobs();
 
-  // 设置定时任务（每6小时执行一次，可通过环境变量配置）
+  // 单次运行模式：执行完毕后退出
+  if (isOnceMode) {
+    console.log(chalk.dim('\n🏁 单次运行模式，任务完成，退出程序。'));
+    process.exit(0);
+  }
+
+  // 守护模式：设置定时任务
   const cronSchedule = process.env.CRON_SCHEDULE || '0 */6 * * *';
   console.log(chalk.dim(`\n⏰ 定时任务已设置: ${cronSchedule}`));
   console.log(chalk.dim('按 Ctrl+C 退出\n'));
